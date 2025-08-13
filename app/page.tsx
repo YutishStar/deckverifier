@@ -7,19 +7,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Link2, CheckCircle2, Settings, Sparkles, FileText, Shield } from 'lucide-react'
+import { Upload, Link2, CheckCircle2, Sparkles, FileText, Shield, Search, Share2 } from 'lucide-react'
 import { DeckUploader } from "@/components/deck-uploader"
 import { TestList } from "@/components/test-list"
-import { loadConfig, saveSubmission } from "@/lib/state"
+import { loadConfig, saveSubmission, defaultConfig } from "@/lib/state"
 import type { Deck } from "@/lib/types"
 
 export default function SubmissionPage() {
-  const [config, setConfig] = useState(loadConfig())
+  const [config, setConfig] = useState(defaultConfig)
   const [deck, setDeck] = useState<Deck | null>(null)
   const [yourName, setYourName] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [tab, setTab] = useState<"upload" | "link">("upload")
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
+    // Initialize config from localStorage after hydration
+    setConfig(loadConfig())
+    setIsHydrated(true)
+    
     const onStorage = (e: StorageEvent) => {
       if (e.key === "sv_config") setConfig(loadConfig())
     }
@@ -50,19 +56,15 @@ export default function SubmissionPage() {
 
   if (submitted) {
     return (
-      <main className="min-h-screen gradient-bg">
-        <div className="mx-auto max-w-2xl px-6 py-24">
-          <div className="text-center">
-            <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-lg">
-              <CheckCircle2 className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">
-              Slides submitted successfully
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-              Your presentation has been submitted and is now under review by the conference organizers.
+      <main className="min-h-screen">
+        <div className="mx-auto max-w-xl px-6 py-24">
+          <div className="text-center space-y-4">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-neutral-700" />
+            <h1 className="text-3xl font-semibold tracking-tight">Slides submitted</h1>
+            <p className="text-sm text-neutral-600">
+              Your presentation was saved for review. You can submit another one.
             </p>
-            <Button onClick={startOver} size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-white px-8">
+            <Button onClick={startOver} size="sm" variant="outline">
               Submit another presentation
             </Button>
           </div>
@@ -72,165 +74,154 @@ export default function SubmissionPage() {
   }
 
   return (
-    <main className="min-h-screen gradient-bg">
-      {/* Header */}
-      <header className="border-b border-gray-200/50 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="mx-auto max-w-7xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500">
-                <FileText className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Slide Validator</h1>
-                <p className="text-sm text-gray-500">Conference submission portal</p>
+    <main className="min-h-screen">
+      {/* Substack-inspired Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="relative flex items-center justify-between h-14">
+            {/* Left Section - Simple Avatar */}
+            <div className="flex items-center">
+              <img 
+                src="/images/admin-avatar.png" 
+                alt="Avatar" 
+                className="h-8 w-8 rounded-full" 
+              />
+            </div>
+            
+            {/* Center Section - Clean Brand */}
+            <div className="absolute left-1/2 -translate-x-1/2">
+              <div className="text-2xl font-medium text-gray-900 tracking-tight">
+                deckverifier.com/balajis
               </div>
             </div>
-            <a
-              href="/admin/login"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </a>
+            
+            {/* Right Section - Minimal Actions */}
+            <div className="flex items-center space-x-4">
+              <button 
+                aria-label="Search" 
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+              <button 
+                aria-label="Share" 
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={async () => {
+                  const shareUrl = process.env.NEXT_PUBLIC_SHARE_URL || window.location.href;
+                  try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    // You can add a toast notification here later
+                  } catch (err) {
+                    console.error('Failed to copy link:', err);
+                  }
+                }}
+              >
+                <Share2 className="h-5 w-5" />
+              </button>
+              <a 
+                href="/admin/login" 
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Admin Sign in
+              </a>
+            </div>
           </div>
+          {/* Substack-style Navigation */}
+          <nav className="flex items-center justify-center space-x-8 py-3 text-sm">
+            <button
+              className={`pb-2 transition-colors ${
+                tab === "upload" 
+                  ? "text-gray-900 font-medium border-b-2 border-gray-900" 
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              onClick={() => setTab("upload")}
+            >
+              Submit file
+            </button>
+            <button
+              className={`pb-2 transition-colors ${
+                tab === "link" 
+                  ? "text-gray-900 font-medium border-b-2 border-gray-900" 
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              onClick={() => setTab("link")}
+            >
+              Submit URL
+            </button>
+          </nav>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold tracking-tight text-gray-900 mb-6">
-            Submit your
-            <br />
-            <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-              conference slides
-            </span>
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            Upload your presentation and let our AI-powered validator ensure it meets all conference requirements.
-          </p>
-          
-          {/* Feature highlights */}
-          <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-yellow-500" />
-              Format validation
-            </div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-yellow-500" />
-              AI-powered checks
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-yellow-500" />
-              Instant feedback
-            </div>
-          </div>
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {/* Hero */}
+        <div className="mb-10 space-y-2 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">Submit your slides</h2>
+          <p className="text-sm text-neutral-600">Fast, minimal validation before you share.</p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2 max-w-6xl mx-auto">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Upload Section */}
-          <Card className="glass-card shadow-xl">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl font-semibold text-gray-900">Upload your presentation</CardTitle>
-              <CardDescription className="text-gray-600">
-                Start by providing your details and uploading your slides
-              </CardDescription>
+          <Card>
+            <CardHeader className="pb-4 text-center">
+              <CardTitle className="text-base font-medium">Upload</CardTitle>
+              <CardDescription className="text-xs">Provide your details and add a file</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="your-name" className="text-sm font-medium text-gray-700">Your name</Label>
-                <Input 
-                  id="your-name" 
-                  placeholder="e.g. Ada Lovelace" 
-                  value={yourName} 
-                  onChange={(e) => setYourName(e.target.value)}
-                  className="h-12 text-base"
-                />
+                <Label htmlFor="your-name" className="text-xs">Your name</Label>
+                <Input id="your-name" placeholder="e.g. Ada Lovelace" value={yourName} onChange={(e) => setYourName(e.target.value)} />
               </div>
 
-              <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-12">
-                  <TabsTrigger value="upload" className="gap-2 text-sm">
-                    <Upload className="h-4 w-4" />
-                    Upload file
+              <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-9">
+                  <TabsTrigger value="upload" className="gap-2 text-xs">
+                    <Upload className="h-3.5 w-3.5" /> Upload
                   </TabsTrigger>
-                  <TabsTrigger value="link" className="gap-2 text-sm" disabled>
-                    <Link2 className="h-4 w-4" />
-                    Paste URL
+                  <TabsTrigger value="link" className="gap-2 text-xs">
+                    <Link2 className="h-3.5 w-3.5" /> URL
                   </TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="upload" className="mt-6">
-                  <DeckUploader
-                    mode="file"
-                    config={config}
-                    onReady={(d) => setDeck(d)}
-                  />
+
+                <TabsContent value="upload" className="mt-4">
+                  <DeckUploader mode="file" config={config} onReady={(d) => setDeck(d)} />
                 </TabsContent>
-                
-                <TabsContent value="link" className="mt-6">
-                  <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center">
-                    <div className="font-medium text-gray-900 mb-2">Coming soon</div>
-                    <p className="text-sm text-gray-600">
-                      URL validation is being upgraded. Please export to PDF and upload the file.
-                    </p>
+
+                <TabsContent value="link" className="mt-4">
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-neutral-600">
+                    Coming soon
                   </div>
                 </TabsContent>
               </Tabs>
 
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <Sparkles className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
-                  <strong>Pro tip:</strong> Export your slides to PDF format for the most accurate validation results.
+              <Alert>
+                <AlertDescription className="text-xs">
+                  Export slides to PDF for the most accurate results.
                 </AlertDescription>
               </Alert>
             </CardContent>
           </Card>
 
           {/* Results Section */}
-          <Card className="glass-card shadow-xl">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl font-semibold text-gray-900">Validation results</CardTitle>
-              <CardDescription className="text-gray-600">
-                Real-time feedback on your presentation
-              </CardDescription>
+          <Card>
+            <CardHeader className="pb-4 text-center">
+              <CardTitle className="text-base font-medium">Results</CardTitle>
+              <CardDescription className="text-xs">Real-time feedback</CardDescription>
             </CardHeader>
             <CardContent>
               {!deck ? (
-                <div className="text-center py-12">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                    <FileText className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500">
-                    Upload your slides to see validation results
-                  </p>
+                <div className="text-center py-10">
+                  <FileText className="mx-auto mb-3 h-8 w-8 text-neutral-300" />
+                  <p className="text-sm text-neutral-600">Upload a file to see results</p>
                 </div>
               ) : (
-                <TestList
-                  key={deck.id}
-                  initialDeck={deck}
-                  config={config}
-                  onDeckUpdate={setDeck}
-                  onAllDone={() => {}}
-                />
+                <TestList key={deck.id} initialDeck={deck} config={config} onDeckUpdate={setDeck} onAllDone={() => {}} />
               )}
 
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
-                    All tests must pass to enable submission
-                  </p>
-                  <Button 
-                    disabled={!deck || !canSubmit} 
-                    onClick={() => deck && handleSubmitted(deck)}
-                    size="lg"
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-8"
-                  >
-                    <CheckCircle2 className="mr-2 h-5 w-5" />
-                    Submit presentation
-                  </Button>
-                </div>
+              <div className="mt-6 flex items-center justify-between border-t pt-4">
+                <p className="text-xs text-neutral-600">All tests must pass to submit</p>
+                <Button disabled={!deck || !canSubmit} onClick={() => deck && handleSubmitted(deck)} size="sm">
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Submit
+                </Button>
               </div>
             </CardContent>
           </Card>

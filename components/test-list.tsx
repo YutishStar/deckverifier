@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, Loader2, RotateCcw, Info, Sparkles } from 'lucid
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import type { Deck, TestResult, Config } from "@/lib/types"
 import { runDeterministicChecks } from "@/lib/tests-deterministic"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -20,6 +21,8 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
   const [deck, setDeck] = useState<Deck>(initialDeck)
   const [running, setRunning] = useState(false)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [currentStep, setCurrentStep] = useState<string>("") 
+  const [progress, setProgress] = useState(0)
 
   function updateDeck(next: Deck) {
     setDeck(next)
@@ -30,13 +33,27 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
 
   async function runAll() {
     setRunning(true)
+    setProgress(0)
+    setCurrentStep("🔍 Running deterministic checks...")
+    
     const detResults = runDeterministicChecks(deck, config)
     let nextDeck = { ...deck, tests: detResults }
     updateDeck(nextDeck)
+    
+    const totalSteps = (config.aiChecks?.length ?? 0) + 1
+    setProgress(Math.round((1 / totalSteps) * 100))
 
     if (hasAiChecks) {
-      const aiResults = await Promise.all(
-        (config.aiChecks ?? []).map(async (ac): Promise<TestResult> => {
+      setCurrentStep("🤖 Running AI-powered checks...")
+      
+      const aiResults: TestResult[] = []
+      const aiChecks = config.aiChecks ?? []
+      
+      for (let i = 0; i < aiChecks.length; i++) {
+        const ac = aiChecks[i]
+        setCurrentStep(`🤖 Checking: ${ac.label}...`)
+        
+        const result = await (async (): Promise<TestResult> => {
           const body = {
             ruleId: ac.id,
             ruleLabel: ac.label,
@@ -90,14 +107,25 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
             }
             return t
           }
-        })
-      )
-      nextDeck = { ...nextDeck, tests: [...detResults, ...aiResults] }
-      updateDeck(nextDeck)
+        })()
+        
+        aiResults.push(result)
+        setProgress(Math.round(((i + 2) / totalSteps) * 100))
+        
+        // Update deck with partial results for real-time feedback
+        nextDeck = { ...nextDeck, tests: [...detResults, ...aiResults] }
+        updateDeck(nextDeck)
+      }
     }
 
-    setRunning(false)
-    onAllDone?.()
+    setCurrentStep("✅ All checks completed!")
+    setProgress(100)
+    setTimeout(() => {
+      setRunning(false)
+      setCurrentStep("")
+      setProgress(0)
+      onAllDone?.()
+    }, 1000)
   }
 
   useEffect(() => {
@@ -122,15 +150,25 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* Progress indicator */}
-        {totalTests > 0 && (
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm">
-              <div className="flex h-2 w-2 rounded-full bg-yellow-500"></div>
-              {passedTests} of {totalTests} tests passed
-            </div>
-          </div>
+      <div className="space-y-4">
+        {/* Enhanced progress indicator */}
+        {running && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-900">{currentStep}</span>
+                  <span className="text-xs text-blue-700">{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Test summary */}
+        {totalTests > 0 && !running && (
+          <div className="text-center text-xs text-neutral-700">{passedTests} of {totalTests} tests passed</div>
         )}
 
         <div className="space-y-3">
@@ -138,8 +176,8 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
             <Card className="border-dashed">
               <CardContent className="flex items-center justify-center py-8">
                 <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Preparing validation tests...</p>
+                  <Loader2 className="h-6 w-6 animate-spin text-neutral-400 mx-auto mb-2" />
+                  <p className="text-xs text-neutral-600">Preparing validation tests...</p>
                 </div>
               </CardContent>
             </Card>
@@ -151,18 +189,17 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
               const shown = showAll ? details : details.slice(0, 2)
 
               return (
-                <Card key={t.id} className={`transition-all ${t.status === "pass" ? "border-green-200 bg-green-50/50" : t.status === "fail" ? "border-red-200 bg-red-50/50" : "border-gray-200"}`}>
-                  <CardContent className="p-4">
+                <Card key={t.id} className={`transition-all ${t.status === "pass" ? "border-green-200" : t.status === "fail" ? "border-red-200" : "border-neutral-200"}`}>
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <div className="flex items-center gap-2">
-                            {isAi && <Sparkles className="h-4 w-4 text-yellow-500" />}
-                            <span className="font-medium text-gray-900">{t.label}</span>
+                            {isAi && <Sparkles className="h-4 w-4 text-neutral-600" />}<span className="text-sm font-medium">{t.label}</span>
                             {isAi && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                                  <Info className="h-4 w-4 text-neutral-400 cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs text-xs">
                                   {aiHintFor(t.id)}
@@ -173,10 +210,10 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
                         </div>
                         
                         {shown.length > 0 && (
-                          <ul className="space-y-1 text-sm text-gray-600">
+                          <ul className="space-y-1 text-xs text-neutral-700">
                             {shown.map((d, i) => (
                               <li key={i} className="flex items-start gap-2">
-                                <span className="text-gray-400 mt-1">•</span>
+                                <span className="text-neutral-400 mt-0.5">•</span>
                                 <span>{d}</span>
                               </li>
                             ))}
@@ -186,7 +223,7 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
                         {details.length > 2 && (
                           <button
                             type="button"
-                            className="mt-2 text-xs font-medium text-gray-500 hover:text-gray-700 underline underline-offset-2"
+                            className="mt-1 text-[11px] text-neutral-600 hover:text-neutral-900 underline underline-offset-2"
                             onClick={() => setExpanded((m) => ({ ...m, [t.id]: !m[t.id] }))}
                           >
                             {showAll ? "Show less" : `Show ${details.length - 2} more`}
@@ -206,7 +243,7 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
                             Fail
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                          <Badge variant="secondary" className="bg-neutral-100 text-neutral-700">
                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                             Running
                           </Badge>
@@ -221,9 +258,8 @@ export function TestList({ initialDeck, config, onDeckUpdate, onAllDone }: Props
         </div>
 
         <div className="flex justify-center">
-          <Button variant="outline" onClick={runAll} disabled={anyRunning} className="gap-2">
-            <RotateCcw className="h-4 w-4" />
-            Re-run validation
+          <Button variant="outline" onClick={runAll} disabled={anyRunning} className="gap-2 h-9 px-3 text-xs">
+            <RotateCcw className="h-4 w-4" /> Re-run
           </Button>
         </div>
       </div>

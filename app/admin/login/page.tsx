@@ -43,11 +43,11 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-white">
       {/* Close button */}
       <button
         onClick={handleClose}
-        className="fixed top-6 right-6 z-10 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+        className="fixed top-6 right-6 z-10 text-gray-400 hover:text-gray-600 transition-colors"
         aria-label="Close"
       >
         <X className="h-5 w-5" />
@@ -55,93 +55,73 @@ export default function AdminLoginPage() {
 
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="w-full max-w-md">
-          <div className="text-center">
-            {/* Avatar */}
-            <div className="mx-auto mb-8 h-20 w-20 overflow-hidden rounded-full bg-gray-200">
+          {/* Header matching main page style */}
+          <div className="mb-10 space-y-2 text-center">
+            {/* Logo */}
+            <div className="mx-auto mb-6 h-16 w-16 overflow-hidden rounded-full bg-gray-100">
               <img
-                src="/placeholder.svg?height=80&width=80&text=Admin"
+                src="/images/admin-logo.svg"
                 alt="Admin"
                 className="h-full w-full object-cover"
               />
             </div>
+            
+            <h2 className="text-2xl font-semibold tracking-tight">Admin Access</h2>
+            <p className="text-sm text-neutral-600">Secure dashboard for conference organizers.</p>
+          </div>
 
-            {/* Title */}
-            <h1 className="mb-2 text-2xl font-semibold text-gray-900">
-              slidevalidator.com
-            </h1>
-
-            {/* Subtitle */}
-            <p className="mb-2 text-gray-600">
-              Admin access for conference organizers.
-            </p>
-
-            {/* Badge line */}
-            <div className="mb-8 flex items-center justify-center gap-2 text-sm text-gray-500">
-              <span>By Admin</span>
-              <span className="text-yellow-500">⚡</span>
-              <span>Secure dashboard access</span>
+          {/* Login Card matching main page style */}
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+            <div className="pb-4 pt-6 text-center">
+              <h3 className="text-base font-medium">Sign In</h3>
+              <p className="text-xs text-muted-foreground">Enter your admin credentials</p>
             </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleLogin} className="mb-6">
-              <div className="flex overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password..."
-                  className="flex-1 border-0 bg-transparent px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0"
-                  required
-                />
+            <div className="p-6 pt-0 space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-xs font-medium">Admin Password</label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter admin password..."
+                    required
+                  />
+                </div>
+                
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="rounded-none border-0 bg-yellow-600 px-6 py-3 text-white hover:bg-yellow-700 focus:ring-0 disabled:opacity-50"
+                  className="w-full"
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </Button>
-              </div>
-            </form>
+              </form>
 
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6">
-                <Alert variant="destructive" className="border-red-200 bg-red-50 text-left">
-                  <AlertDescription className="text-red-800 text-sm">{error}</AlertDescription>
-                </Alert>
-              </div>
-            )}
+              {/* Error Message */}
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-red-800 text-sm">{error}</p>
+                </div>
+              )}
 
-            {/* Legal text */}
-            <div className="mb-6 text-xs text-gray-500">
-              <p>
-                By signing in, you agree to the platform's{" "}
-                <a href="#" className="underline hover:text-gray-700">
-                  Terms of Service
-                </a>{" "}
-                and acknowledge its{" "}
-                <a href="#" className="underline hover:text-gray-700">
-                  Privacy Policy
+              {/* Back link */}
+              <div className="text-center">
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to submissions
                 </a>
-                .
-              </p>
-            </div>
+              </div>
 
-            {/* Bottom link */}
-            <div>
-              <a
-                href="/"
-                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to submissions
-              </a>
-            </div>
-
-            {/* Development note */}
-            <div className="mt-8 rounded-lg bg-gray-100 p-4 text-xs text-gray-600">
-              <p className="font-medium mb-1">Development Mode</p>
-              <p>Default password: <code className="bg-white px-2 py-1 rounded font-mono">admin123</code></p>
+              {/* Development note */}
+              <div className="rounded-lg bg-muted p-4 text-xs text-muted-foreground">
+                <p className="font-medium mb-1">Development Mode</p>
+                <p>Default password: <code className="bg-background px-2 py-1 rounded font-mono">admin123</code></p>
+              </div>
             </div>
           </div>
         </div>

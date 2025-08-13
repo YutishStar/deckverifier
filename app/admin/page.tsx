@@ -8,17 +8,23 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Info, Download, LogOut, Users, SettingsIcon, FileText, TrendingUp, AlertTriangle } from 'lucide-react'
 import { AdminChecksForm } from "@/components/admin-checks-form"
-import { loadConfig, saveConfig, loadSubmissions } from "@/lib/state"
+import { loadConfig, saveConfig, loadSubmissions, defaultConfig } from "@/lib/state"
 import { mergePdfs } from "@/lib/merge-pdf"
 import type { Deck } from "@/lib/types"
 
 export default function AdminPage() {
-  const [config, setConfig] = useState(loadConfig())
-  const [subs, setSubs] = useState(loadSubmissions())
+  const [config, setConfig] = useState(defaultConfig)
+  const [subs, setSubs] = useState<Deck[]>([])
   const [loading, setLoading] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    // Initialize data from localStorage after hydration
+    setConfig(loadConfig())
+    setSubs(loadSubmissions())
+    setIsHydrated(true)
+    
     fetch("/api/admin/check")
       .then(res => {
         if (!res.ok) {

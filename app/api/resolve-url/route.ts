@@ -16,6 +16,86 @@ function googleSlidesExportUrl(input: string): string | null {
   }
 }
 
+function figmaExportUrl(input: string): string | null {
+  try {
+    const u = new URL(input)
+    if (!u.hostname.includes("figma.com")) return null
+    // Figma file URLs: https://www.figma.com/file/[file-id]/[file-name]
+    const m = u.pathname.match(/\/file\/([^/]+)/)
+    if (m?.[1]) {
+      // Note: Figma requires API token for PDF export, this is a placeholder
+      return `https://api.figma.com/v1/files/${m[1]}/export?format=pdf`
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function canvaExportUrl(input: string): string | null {
+  try {
+    const u = new URL(input)
+    if (!u.hostname.includes("canva.com")) return null
+    // Canva design URLs: https://www.canva.com/design/[design-id]/[design-name]
+    const m = u.pathname.match(/\/design\/([^/]+)/)
+    if (m?.[1]) {
+      // Note: Canva requires authentication for PDF export, this is a placeholder
+      return `https://www.canva.com/api/v1/designs/${m[1]}/export/pdf`
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function detectPlatform(url: string): string {
+  const u = url.toLowerCase()
+  if (u.includes("docs.google.com")) return "google-slides"
+  if (u.includes("figma.com")) return "figma"
+  if (u.includes("canva.com")) return "canva"
+  if (u.includes("slides.com")) return "slides-com"
+  if (u.includes("prezi.com")) return "prezi"
+  return "unknown"
+}
+
+function getPlatformSpecificHints(platform: string, html: string): any {
+  const hints: any = { platform }
+  
+  switch (platform) {
+    case "google-slides":
+      // Look for slide count indicators in Google Slides
+      const slideMatch = html.match(/(\d+)\s*slides?/i)
+      if (slideMatch) hints.estimatedSlides = parseInt(slideMatch[1])
+      hints.exportAvailable = true
+      hints.requiresAuth = false
+      break
+      
+    case "figma":
+      // Look for frame count or page indicators
+      const frameMatch = html.match(/(\d+)\s*frames?/i)
+      if (frameMatch) hints.estimatedFrames = parseInt(frameMatch[1])
+      hints.exportAvailable = true
+      hints.requiresAuth = true
+      hints.authNote = "Figma export requires API token"
+      break
+      
+    case "canva":
+      // Look for page indicators
+      const pageMatch = html.match(/(\d+)\s*pages?/i)
+      if (pageMatch) hints.estimatedPages = parseInt(pageMatch[1])
+      hints.exportAvailable = true
+      hints.requiresAuth = true
+      hints.authNote = "Canva export requires authentication"
+      break
+      
+    default:
+      hints.exportAvailable = false
+      hints.requiresAuth = false
+  }
+  
+  return hints
+}
+
 function isLikelyPdfUrl(url: string) {
   const u = url.toLowerCase()
   return u.endsWith(".pdf") || u.includes("/export/pdf") || u.includes("format=pdf")
@@ -110,16 +190,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2) Google Slides export
+    // 2) Platform-specific export attempts
     if (tryExportToPdf) {
-      const exp = googleSlidesExportUrl(url)
-      if (exp) {
-        const file = await fetchAsPdf(exp)
-        if (file) {
-          return new Response(
-            JSON.stringify({ ok: true, method: "pdf-export", ...file }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          )
+      const platform = detectPlatform(url)
+      let exportUrl: string | null = null
+      let exportMethod = "pdf-export"
+      
+      switch (platform) {
+        case "google-slides":
+          exportUrl = googleSlidesExportUrl(url)
+          exportMethod = "google-slides-export"
+          break
+        case "figma":
+          exportUrl = figmaExportUrl(url)
+          exportMethod = "figma-export"
+          break
+        case "canva":
+          exportUrl = canvaExportUrl(url)
+          exportMethod = "canva-export"
+          break
+      }
+      
+      if (exportUrl) {
+        try {
+          const file = await fetchAsPdf(exportUrl)
+          if (file) {
+            return new Response(
+              JSON.stringify({ ok: true, method: exportMethod, platform, ...file }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          }
+        } catch (error) {
+          // If export fails, continue to HTML analysis
+          console.warn(`Failed to export from ${platform}:`, error)
         }
       }
     }
@@ -140,10 +243,19 @@ export async function POST(req: Request) {
         }
       }
 
-      // 4) Fallback: HTML heuristics for slides
+      // 4) Fallback: HTML heuristics for slides with platform detection
+      const platform = detectPlatform(url)
       const analysis = analyzeHtmlForSlides(html, url)
+      
+      // Enhanced analysis with platform-specific hints
+      const enhancedAnalysis = {
+        ...analysis,
+        platform,
+        platformSpecific: getPlatformSpecificHints(platform, html)
+      }
+      
       return new Response(
-        JSON.stringify({ ok: true, method: "html", analysis }),
+        JSON.stringify({ ok: true, method: "html", analysis: enhancedAnalysis }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       )
     }

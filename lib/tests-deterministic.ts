@@ -1,8 +1,25 @@
 import type { Config, Deck, TestResult } from "./types"
+import { getPlatformName, getFormatIcon } from "./detect-format"
 
 function fmtMB(bytes?: number) {
   if (!bytes && bytes !== 0) return null
   return Math.round((bytes / (1024 * 1024)) * 10) / 10
+}
+
+function getSmartDetails(deck: Deck, value: any, fallbackMessage: string): string[] {
+  const platformName = getPlatformName(deck.format)
+  const icon = getFormatIcon(deck.format)
+  
+  if (value !== null && value !== undefined) {
+    return [`${icon} Detected: ${value}`]
+  }
+  
+  const isUrl = deck.sourceType === "url"
+  if (isUrl) {
+    return [`${icon} ${fallbackMessage} for ${platformName} links`]
+  }
+  
+  return [`${icon} ${fallbackMessage}`]
 }
 
 export function runDeterministicChecks(deck: Deck, config: Config): TestResult[] {

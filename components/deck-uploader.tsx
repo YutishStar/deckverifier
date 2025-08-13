@@ -91,7 +91,7 @@ export function DeckUploader({ mode, config, onReady }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* File Upload Area */}
       <div className="relative">
         <input
@@ -108,24 +108,24 @@ export function DeckUploader({ mode, config, onReady }: Props) {
         />
         <label
           htmlFor="file-upload"
-          className={`relative block w-full rounded-xl border-2 border-dashed p-8 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 cursor-pointer transition-colors ${
-            file ? "border-yellow-300 bg-yellow-50" : "border-gray-300 bg-gray-50"
+          className={`relative block w-full rounded-lg border border-dashed p-6 text-center cursor-pointer transition-colors ${
+            file ? "border-neutral-300 bg-neutral-50" : "border-neutral-200 hover:border-neutral-300"
           }`}
         >
           <div className="mx-auto flex flex-col items-center">
             {file ? (
               <>
-                <FileText className="h-12 w-12 text-yellow-500 mb-4" />
-                <span className="text-lg font-medium text-gray-900">{file.name}</span>
-                <span className="text-sm text-gray-500 mt-1">
+                <FileText className="h-10 w-10 text-neutral-600 mb-3" />
+                <span className="text-sm font-medium text-neutral-900">{file.name}</span>
+                <span className="text-xs text-neutral-600 mt-1">
                   {(file.size / (1024 * 1024)).toFixed(1)} MB
                 </span>
               </>
             ) : (
               <>
-                <Upload className="h-12 w-12 text-gray-400 mb-4" />
-                <span className="text-lg font-medium text-gray-900">Choose your presentation file</span>
-                <span className="text-sm text-gray-500 mt-1">
+                <Upload className="h-10 w-10 text-neutral-400 mb-3" />
+                <span className="text-sm font-medium text-neutral-900">Choose a presentation file</span>
+                <span className="text-xs text-neutral-600 mt-1">
                   or drag and drop it here
                 </span>
               </>
@@ -136,22 +136,22 @@ export function DeckUploader({ mode, config, onReady }: Props) {
 
       {/* Format Detection */}
       {formatPreview && (
-        <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-gray-200">
+        <div className="flex items-center justify-between p-3 rounded-md border">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">Detected format:</span>
+            <span className="text-xs text-neutral-600">Detected format:</span>
             <Badge variant={isFormatAccepted(formatPreview) ? "default" : "destructive"} className="uppercase">
               {formatPreview}
             </Badge>
           </div>
           {isFormatAccepted(formatPreview) && (
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
           )}
         </div>
       )}
 
       {/* Accepted Formats */}
       <div className="text-center">
-        <p className="text-sm text-gray-500 mb-2">Accepted formats:</p>
+        <p className="text-xs text-neutral-600 mb-2">Accepted formats:</p>
         <div className="flex flex-wrap justify-center gap-2">
           {config.acceptedFormats.map((format) => (
             <Badge key={format} variant="outline" className="uppercase">
@@ -163,25 +163,21 @@ export function DeckUploader({ mode, config, onReady }: Props) {
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="rounded-md border border-red-200 bg-red-50 p-3">
+          <p className="text-xs text-red-800">{error}</p>
         </div>
       )}
 
       {/* Start Button */}
-      <Button 
-        onClick={handleStart} 
-        disabled={loading || !file} 
-        className="w-full h-12 bg-yellow-500 hover:bg-yellow-600 text-white font-medium"
-      >
+      <Button onClick={handleStart} disabled={loading || !file} className="w-full h-10">
         {loading ? (
           <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Processing...
           </>
         ) : (
           <>
-            <CheckCircle2 className="mr-2 h-5 w-5" />
+            <CheckCircle2 className="mr-2 h-4 w-4" />
             Start validation
           </>
         )}

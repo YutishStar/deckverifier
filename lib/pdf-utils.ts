@@ -32,17 +32,58 @@ function detectMedia(pdfAscii: string): { hasVideo?: boolean; hasAudio?: boolean
 }
 
 function countImagesApprox(pdfAscii: string) {
-  const subtypeImageCount = (pdfAscii.match(/\/Subtype\s*\/Image\b/g) || []).length
-  const doImCount = (pdfAscii.match(/\/Im[0-9]+\s+Do\b/g) || []).length
-  const imagesApprox = Math.max(subtypeImageCount, doImCount)
+  // Count unique image objects (more accurate than drawing operations)
+  const imageObjects = new Set<string>()
+  
+  // Find image object definitions with size filters
+  const imageRegex = /\/Subtype\s*\/Image.*?\/Width\s+(\d+).*?\/Height\s+(\d+)/g
+  const imageMatches = Array.from(pdfAscii.matchAll(imageRegex))
+  for (const match of imageMatches) {
+    const width = parseInt(match[1])
+    const height = parseInt(match[2])
+    
+    // Filter out tiny images (likely icons/bullets) and very thin lines
+    if (width >= 32 && height >= 32 && width < 5000 && height < 5000) {
+      // Create unique identifier based on dimensions and position in file
+      const id = `${width}x${height}_${match.index}`
+      imageObjects.add(id)
+    }
+  }
+  
+  // Fallback to simpler counting if no size info found
+  let imagesApprox = imageObjects.size
+  if (imagesApprox === 0) {
+    const subtypeCount = (pdfAscii.match(/\/Subtype\s*\/Image\b/g) || []).length
+    // Apply heuristic: assume 30% are meaningful content images
+    imagesApprox = Math.max(0, Math.floor(subtypeCount * 0.3))
+  }
+  
   return { imagesApprox }
 }
 
 function countTextAndBulletsApprox(pdfAscii: string, pageCount: number) {
   const textOpsApprox = (pdfAscii.match(/[\s\(]BT[\s]/g) || []).length
-  let bulletsApprox = (pdfAscii.match(/[•\u2022]/g) || []).length
-  const clamp = Math.max(8 * pageCount, 50)
-  if (bulletsApprox > clamp) bulletsApprox = Math.round(clamp)
+  
+  // More comprehensive bullet detection
+  const bulletPatterns = [
+    /[•\u2022]/g,           // Standard bullets
+    /[\u2023\u25E6\u2043]/g, // Other bullet characters
+    /^\s*[\-\*\+]\s/gm,    // Dash/asterisk bullets at line start
+    /^\s*\d+[\.)\s]/gm,    // Numbered lists
+    /^\s*[a-zA-Z][\.)\s]/gm // Lettered lists
+  ]
+  
+  let bulletsApprox = 0
+  for (const pattern of bulletPatterns) {
+    const matches = pdfAscii.match(pattern) || []
+    bulletsApprox += matches.length
+  }
+  
+  // Apply reasonable limits based on page count
+  const maxBulletsPerPage = 15 // Reasonable max bullets per slide
+  const clamp = Math.max(maxBulletsPerPage * pageCount, 50)
+  if (bulletsApprox > clamp) bulletsApprox = Math.round(clamp * 0.8)
+  
   return { textOpsApprox, bulletsApprox }
 }
 
